@@ -15,7 +15,8 @@ public class WorkOrderServiceImpl(
     IWorkOrderRepository repo,
     IWorkOrderTaskRepository taskRepo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IWorkOrderService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<WorkOrderServiceImpl> logger) : IWorkOrderService
 {
     // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ public class WorkOrderServiceImpl(
                 Category = "WorkOrder"
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Work order completion notification failed for WO {WorkOrderId}.", workOrderId); }
     }
 
     private async Task LogAuditAsync(string action, string entityType, string entityId, string? details = null)
@@ -87,7 +88,7 @@ public class WorkOrderServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget: never fail the main operation */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in WorkOrderService."); }
     }
 
     // ── CRUD ─────────────────────────────────────────────────────────────────
@@ -248,7 +249,7 @@ public class WorkOrderServiceImpl(
                     "Please complete quality inspection first.");
         }
         catch (ValidationException) { throw; }
-        catch { /* QualityService unavailable — allow through */ }
+        catch (Exception ex) { logger.LogWarning(ex, "QualityService unavailable during inspection validation for WO {WorkOrderId}. Allowing through.", workOrderId); }
     }
 
     // ── Local DTOs for QualityService response ────────────────────────────────

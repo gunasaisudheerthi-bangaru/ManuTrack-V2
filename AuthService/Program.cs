@@ -126,13 +126,15 @@ using (var scope = app.Services.CreateScope())
     // Seed default admin if no users exist
     if (!db.Users.Any())
     {
+        var cfg = app.Services.GetRequiredService<IConfiguration>();
         db.Users.Add(new AuthService.Models.AuthUser
         {
-            Name = "System Admin",
-            Email = "admin@manutrack.com",
-            Phone = "0000000000",
-            Role = "Admin",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123", workFactor: 4),
+            Name     = cfg["Seed:AdminName"]     ?? "System Admin",
+            Email    = cfg["Seed:AdminEmail"]    ?? "admin@manutrack.com",
+            Phone    = cfg["Seed:AdminPhone"]    ?? "0000000000",
+            Role     = "Admin",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                cfg["Seed:AdminPassword"] ?? "Admin@123", workFactor: 4),
             IsActive = true
         });
         db.SaveChanges();

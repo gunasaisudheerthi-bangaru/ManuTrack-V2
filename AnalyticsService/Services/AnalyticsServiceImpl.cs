@@ -14,8 +14,11 @@ public class AnalyticsServiceImpl(
     IKpiReportRepository kpiRepo,
     IProductionMetricRepository metricRepo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IAnalyticsService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<AnalyticsServiceImpl> logger) : IAnalyticsService
 {
+    private const int MaxPageSize = 20;
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private string? GetBearerToken()
@@ -67,7 +70,7 @@ public class AnalyticsServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in AnalyticsService."); }
     }
 
     // ── KPI Reports ───────────────────────────────────────────────────────────
@@ -115,8 +118,8 @@ public class AnalyticsServiceImpl(
         string? metricType, string? serviceSource, DateTime? from, DateTime? to,
         int page, int pageSize)
     {
-        // clamp pageSize to max 100
-        pageSize = Math.Min(pageSize, 100);
+        // clamp pageSize to max allowed
+        pageSize = Math.Min(pageSize, MaxPageSize);
         page = Math.Max(page, 1);
 
         var totalRecords = await metricRepo.CountAsync(metricType, serviceSource, from, to);
@@ -212,7 +215,7 @@ public class AnalyticsServiceImpl(
                 o.ActualEndDate.Value.Year  == now.Year &&
                 o.ActualEndDate.Value.Month == now.Month);
         }
-        catch { /* service unavailable — leave values as 0 */ }
+        catch (Exception ex) { logger.LogWarning(ex, "WorkOrderService unavailable — work order stats will show 0."); }
     }
 
     private async Task FetchInventoryStatsAsync(DashboardSummaryViewModel summary)
@@ -230,7 +233,7 @@ public class AnalyticsServiceImpl(
             summary.LowStockItems   = items.Count(i => i.Status == "LowStock");
             summary.OutOfStockItems = items.Count(i => i.Status == "OutOfStock");
         }
-        catch { /* service unavailable */ }
+        catch (Exception ex) { logger.LogWarning(ex, "InventoryService unavailable — inventory stats will show 0."); }
     }
 
     private async Task FetchQualityStatsAsync(DashboardSummaryViewModel summary)
@@ -248,7 +251,7 @@ public class AnalyticsServiceImpl(
             summary.OpenDefects     = defects.Count(d => d.Status == "Open");
             summary.CriticalDefects = defects.Count(d => d.Severity == "Critical");
         }
-        catch { /* service unavailable */ }
+        catch (Exception ex) { logger.LogWarning(ex, "QualityService unavailable — quality stats will show 0."); }
     }
 
     private async Task FetchComplianceStatsAsync(DashboardSummaryViewModel summary)
@@ -256,7 +259,7 @@ public class AnalyticsServiceImpl(
         try
         {
             var client = CreateAuthorizedClient("ComplianceService");
-            var response = await client.GetAsync("api/v1/compliance");
+            var response = await client.GetAsync("api/v1/compliance-reports");
             if (!response.IsSuccessStatusCode) return;
 
             var result = await response.Content.ReadFromJsonAsync<ComplianceListDto>(
@@ -266,7 +269,7 @@ public class AnalyticsServiceImpl(
             summary.PendingComplianceReports =
                 reports.Count(r => r.Status == "Draft" || r.Status == "InReview");
         }
-        catch { /* service unavailable */ }
+        catch (Exception ex) { logger.LogWarning(ex, "ComplianceService unavailable — compliance stats will show 0."); }
     }
 
     // ── Mappers ───────────────────────────────────────────────────────────────

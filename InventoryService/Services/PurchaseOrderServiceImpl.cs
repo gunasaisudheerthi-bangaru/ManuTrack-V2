@@ -17,7 +17,8 @@ public class PurchaseOrderServiceImpl(
     IStockMovementRepository movementRepo,
     ISupplierRepository supplierRepo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IPurchaseOrderService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<PurchaseOrderServiceImpl> logger) : IPurchaseOrderService
 {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ public class PurchaseOrderServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in PurchaseOrderService."); }
     }
 
     // ── CRUD ──────────────────────────────────────────────────────────────────

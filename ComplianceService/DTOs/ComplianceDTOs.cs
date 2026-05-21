@@ -45,7 +45,8 @@ public class UpdateReportStatusRequest
 public class ApproveReportRequest
 {
     [Required(ErrorMessage = "ApprovedBy is required.")]
-    [MaxLength(200)]
+    [MinLength(2, ErrorMessage = "ApprovedBy must be at least 2 characters.")]
+    [MaxLength(200, ErrorMessage = "ApprovedBy cannot exceed 200 characters.")]
     public string ApprovedBy { get; set; } = string.Empty;
 }
 

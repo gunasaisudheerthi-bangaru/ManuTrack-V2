@@ -15,7 +15,8 @@ public class BomServiceImpl(
     IBomRepository bomRepo,
     IProductRepository productRepo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IBomService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<BomServiceImpl> logger) : IBomService
 {
     // ── Internal helpers ────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ public class BomServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget: never fail the main operation */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in BomService."); }
     }
 
     // ── Change 5: Low stock alert (fire-and-forget) ───────────────────────────
@@ -105,7 +106,7 @@ public class BomServiceImpl(
                 });
             }
         }
-        catch { /* fire-and-forget: never fail the main operation */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Low stock notification failed for component {ComponentId}.", componentId); }
     }
 
     // ── CRUD ────────────────────────────────────────────────────────────────

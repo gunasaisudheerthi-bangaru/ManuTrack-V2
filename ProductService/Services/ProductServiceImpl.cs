@@ -14,7 +14,8 @@ namespace ProductService.Services;
 public class ProductServiceImpl(
     IProductRepository repo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IProductService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<ProductServiceImpl> logger) : IProductService
 {
     // ── Internal helpers ────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ public class ProductServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget: never fail the main operation */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in ProductService."); }
     }
 
     // ── CRUD ────────────────────────────────────────────────────────────────

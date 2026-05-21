@@ -4,6 +4,7 @@ namespace InventoryService.DTOs;
 
 public class CreatePurchaseOrderRequest : IValidatableObject
 {
+    [Range(1, int.MaxValue, ErrorMessage = "SupplierRefID must be a positive integer.")]
     public int? SupplierRefID { get; set; }
 
     [MaxLength(100, ErrorMessage = "SupplierID cannot exceed 100 characters.")]

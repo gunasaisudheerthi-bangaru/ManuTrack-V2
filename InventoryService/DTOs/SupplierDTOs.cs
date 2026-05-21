@@ -13,6 +13,7 @@ public class CreateSupplierRequest
     public string? ContactPerson { get; set; }
 
     [MaxLength(50, ErrorMessage = "Phone cannot exceed 50 characters.")]
+    [RegularExpression(@"^\+?[0-9]{10,15}$", ErrorMessage = "Phone must be 10 to 15 digits. Optionally start with +.")]
     public string? Phone { get; set; }
 
     [EmailAddress(ErrorMessage = "Invalid email format.")]
@@ -33,6 +34,7 @@ public class UpdateSupplierRequest
     public string? ContactPerson { get; set; }
 
     [MaxLength(50, ErrorMessage = "Phone cannot exceed 50 characters.")]
+    [RegularExpression(@"^\+?[0-9]{10,15}$", ErrorMessage = "Phone must be 10 to 15 digits. Optionally start with +.")]
     public string? Phone { get; set; }
 
     [EmailAddress(ErrorMessage = "Invalid email format.")]

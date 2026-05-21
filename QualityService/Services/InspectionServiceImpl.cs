@@ -14,7 +14,8 @@ namespace QualityService.Services;
 public class InspectionServiceImpl(
     IInspectionRepository repo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IInspectionService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<InspectionServiceImpl> logger) : IInspectionService
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -67,7 +68,7 @@ public class InspectionServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in InspectionService."); }
     }
 
     // ── Change 3: Fail inspection notification (fire-and-forget) ──────────────
@@ -88,7 +89,7 @@ public class InspectionServiceImpl(
                 Category = "Quality"
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Failed inspection notification failed for inspection {InspectionId}.", inspectionId); }
     }
 
     // ── CRUD ──────────────────────────────────────────────────────────────────
@@ -177,7 +178,7 @@ public class InspectionServiceImpl(
                     "Cannot create inspection for a work order that has not started yet.");
         }
         catch (ValidationException) { throw; }
-        catch { /* WorkOrderService unavailable — allow through */ }
+        catch (Exception ex) { logger.LogWarning(ex, "WorkOrderService unavailable during status validation for WO {WorkOrderId}. Allowing through.", workOrderId); }
     }
 
     // ── Mapper ────────────────────────────────────────────────────────────────

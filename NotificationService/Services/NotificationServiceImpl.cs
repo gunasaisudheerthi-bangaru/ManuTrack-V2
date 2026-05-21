@@ -14,7 +14,8 @@ namespace NotificationService.Services;
 public class NotificationServiceImpl(
     INotificationRepository repo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : INotificationService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<NotificationServiceImpl> logger) : INotificationService
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ public class NotificationServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in NotificationService."); }
     }
 
     // Change 6: auto-calculate expiry based on category

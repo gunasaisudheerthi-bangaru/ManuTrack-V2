@@ -16,7 +16,8 @@ public class ComplianceReportServiceImpl(
     IComplianceReportRepository repo,
     IAuditRepository auditRepo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IComplianceReportService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<ComplianceReportServiceImpl> logger) : IComplianceReportService
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ public class ComplianceReportServiceImpl(
                 Timestamp = DateTime.UtcNow
             });
         }
-        catch { /* never fail the main operation */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Direct audit write failed in ComplianceReportService."); }
     }
 
     // ── Change 3: Notification helpers (fire-and-forget) ─────────────────────
@@ -88,7 +89,7 @@ public class ComplianceReportServiceImpl(
                 Category = "Compliance"
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "InReview notification failed for report {ReportId}.", reportId); }
     }
 
     private async Task NotifyApprovedAsync(int reportId, string title, int generatedByUserId)
@@ -105,7 +106,7 @@ public class ComplianceReportServiceImpl(
                 Category = "Compliance"
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Approved notification failed for report {ReportId}.", reportId); }
     }
 
     // ── CRUD ──────────────────────────────────────────────────────────────────
@@ -258,8 +259,9 @@ public class ComplianceReportServiceImpl(
             return JsonSerializer.Serialize(metrics,
                 new JsonSerializerOptions { WriteIndented = false });
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Metrics calculation failed for compliance report.");
             return "{}";
         }
     }

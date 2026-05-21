@@ -16,7 +16,8 @@ public class InventoryServiceImpl(
     IStockMovementRepository movementRepo,
     ILocationRepository locationRepo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IInventoryService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<InventoryServiceImpl> logger) : IInventoryService
 {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ public class InventoryServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in InventoryService."); }
     }
 
     // ── Change 1: RecalculateStatus + low-stock notification ──────────────────
@@ -106,7 +107,7 @@ public class InventoryServiceImpl(
                     Category = "Inventory"
                 });
             }
-            catch { /* fire-and-forget */ }
+            catch (Exception ex) { logger.LogWarning(ex, "Low stock notification failed for item {ItemId}.", item.InventoryID); }
         }
     }
 
@@ -127,7 +128,7 @@ public class InventoryServiceImpl(
                 CreatedDate = DateTime.UtcNow
             });
         }
-        catch { /* don't fail main operation */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Stock movement record failed for inventory item {InventoryId}.", inventoryId); }
     }
 
     // ── CRUD ──────────────────────────────────────────────────────────────────

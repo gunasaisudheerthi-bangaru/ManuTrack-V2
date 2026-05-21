@@ -15,7 +15,8 @@ public class DefectServiceImpl(
     IDefectRepository defectRepo,
     IInspectionRepository inspectionRepo,
     IHttpClientFactory httpClientFactory,
-    IHttpContextAccessor httpContextAccessor) : IDefectService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<DefectServiceImpl> logger) : IDefectService
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ public class DefectServiceImpl(
                 Details = details
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Audit log failed in DefectService."); }
     }
 
     // ── Change 4: Critical defect — notify + cancel work order (fire-and-forget) ──
@@ -91,7 +92,7 @@ public class DefectServiceImpl(
                 });
             }
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Critical defect notification failed for defect {DefectId}.", defectId); }
 
         // 4b: Cancel the work order
         try
@@ -102,7 +103,7 @@ public class DefectServiceImpl(
                 Status = "Cancelled"
             });
         }
-        catch { /* fire-and-forget */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Work order cancellation failed for WO {WorkOrderId} after critical defect.", workOrderId); }
     }
 
     // ── Operations ────────────────────────────────────────────────────────────
