@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Text.Json;
 using ComplianceService.DTOs;
 using ComplianceService.Enums;
@@ -7,6 +6,7 @@ using ComplianceService.Models;
 using ComplianceService.Repositories.Interfaces;
 using ComplianceService.Services.Interfaces;
 using ManuTrack.SharedKernel.Exceptions;
+using ManuTrack.SharedKernel.Helpers;
 using ManuTrack.SharedKernel.Responses;
 using Microsoft.AspNetCore.Http;
 
@@ -19,43 +19,12 @@ public class ComplianceReportServiceImpl(
     IHttpContextAccessor httpContextAccessor,
     ILogger<ComplianceReportServiceImpl> logger) : IComplianceReportService
 {
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private string? GetBearerToken()
-    {
-        var auth = httpContextAccessor.HttpContext?.Request.Headers["Authorization"].ToString();
-        return auth?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
-            ? auth["Bearer ".Length..] : null;
-    }
-
-    private (int UserId, string UserName) GetCurrentUser()
-    {
-        var user = httpContextAccessor.HttpContext?.User;
-        var idVal = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                 ?? user?.FindFirst("sub")?.Value;
-        var name = user?.FindFirst(ClaimTypes.Name)?.Value
-                ?? user?.FindFirst("name")?.Value
-                ?? "Unknown";
-        int.TryParse(idVal, out var id);
-        return (id, name);
-    }
-
-    private HttpClient CreateAuthorizedClient(string clientName)
-    {
-        var client = httpClientFactory.CreateClient(clientName);
-        var token = GetBearerToken();
-        if (token != null)
-            client.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-        return client;
-    }
-
     // ── Change 4: Direct audit log via repository (no HTTP needed) ────────────
     private async Task WriteAuditAsync(string action, string entityId, string? details = null)
     {
         try
         {
-            var (userId, userName) = GetCurrentUser();
+            var (userId, userName) = ServiceHelper.GetCurrentUser(httpContextAccessor);
             if (userId == 0) return;
 
             await auditRepo.CreateAsync(new AuditEntry
@@ -78,8 +47,8 @@ public class ComplianceReportServiceImpl(
     {
         try
         {
-            var (userId, _) = GetCurrentUser();
-            var client = CreateAuthorizedClient("NotificationService");
+            var (userId, _) = ServiceHelper.GetCurrentUser(httpContextAccessor);
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "NotificationService");
             await client.PostAsJsonAsync("api/v1/notifications", new
             {
                 UserID = userId,
@@ -97,7 +66,7 @@ public class ComplianceReportServiceImpl(
         try
         {
             if (generatedByUserId == 0) return;
-            var client = CreateAuthorizedClient("NotificationService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "NotificationService");
             await client.PostAsJsonAsync("api/v1/notifications", new
             {
                 UserID = generatedByUserId,
@@ -127,7 +96,7 @@ public class ComplianceReportServiceImpl(
 
     public async Task<ApiResponse<ComplianceReportViewModel>> CreateAsync(CreateComplianceReportRequest request)
     {
-        var (userId, userName) = GetCurrentUser();
+        var (userId, userName) = ServiceHelper.GetCurrentUser(httpContextAccessor);
 
         var report = new ComplianceReport
         {

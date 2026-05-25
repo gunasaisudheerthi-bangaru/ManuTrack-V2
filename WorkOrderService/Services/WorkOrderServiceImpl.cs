@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using WorkOrderService.Enums;
 using ManuTrack.SharedKernel.Exceptions;
+using ManuTrack.SharedKernel.Helpers;
 using ManuTrack.SharedKernel.Responses;
 using WorkOrderService.DTOs;
 using WorkOrderService.Models;
@@ -18,41 +18,15 @@ public class WorkOrderServiceImpl(
     IHttpContextAccessor httpContextAccessor,
     ILogger<WorkOrderServiceImpl> logger) : IWorkOrderService
 {
-    // ── Helpers ─────────────────────────────────────────────────────────────
-
-    private string? GetBearerToken()
-    {
-        var auth = httpContextAccessor.HttpContext?.Request.Headers["Authorization"].ToString();
-        return auth?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
-            ? auth["Bearer ".Length..] : null;
-    }
-
-    private (int UserId, string UserName) GetCurrentUser()
-    {
-        var user = httpContextAccessor.HttpContext?.User;
-        var idVal = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                 ?? user?.FindFirst("sub")?.Value;
-        var name = user?.FindFirst(ClaimTypes.Name)?.Value
-                ?? user?.FindFirst("name")?.Value
-                ?? "Unknown";
-        int.TryParse(idVal, out var id);
-        return (id, name);
-    }
-
     // ── Change 3: Completion notification (fire-and-forget) ──────────────────
     private async Task NotifyWorkOrderCompletedAsync(int workOrderId)
     {
         try
         {
-            var (userId, _) = GetCurrentUser();
+            var (userId, _) = ServiceHelper.GetCurrentUser(httpContextAccessor);
             if (userId == 0) return;
 
-            var client = httpClientFactory.CreateClient("NotificationService");
-            var token = GetBearerToken();
-            if (token != null)
-                client.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "NotificationService");
             await client.PostAsJsonAsync("api/v1/notifications", new
             {
                 UserID = userId,
@@ -68,15 +42,10 @@ public class WorkOrderServiceImpl(
     {
         try
         {
-            var (userId, userName) = GetCurrentUser();
+            var (userId, userName) = ServiceHelper.GetCurrentUser(httpContextAccessor);
             if (userId == 0) return;
 
-            var client = httpClientFactory.CreateClient("ComplianceService");
-            var token = GetBearerToken();
-            if (token != null)
-                client.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "ComplianceService");
             await client.PostAsJsonAsync("api/v1/audit", new
             {
                 UserID = userId,
@@ -223,12 +192,7 @@ public class WorkOrderServiceImpl(
     {
         try
         {
-            var client = httpClientFactory.CreateClient("QualityService");
-            var token = GetBearerToken();
-            if (token != null)
-                client.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "QualityService");
             var response = await client.GetAsync($"api/v1/inspections?workOrderId={workOrderId}");
             if (!response.IsSuccessStatusCode) return; // QualityService unavailable — allow through
 

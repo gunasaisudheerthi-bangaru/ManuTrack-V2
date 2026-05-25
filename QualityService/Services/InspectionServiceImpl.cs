@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using QualityService.Enums;
 using ManuTrack.SharedKernel.Exceptions;
+using ManuTrack.SharedKernel.Helpers;
 using ManuTrack.SharedKernel.Responses;
 using QualityService.DTOs;
 using QualityService.Models;
@@ -17,46 +17,15 @@ public class InspectionServiceImpl(
     IHttpContextAccessor httpContextAccessor,
     ILogger<InspectionServiceImpl> logger) : IInspectionService
 {
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private string? GetBearerToken()
-    {
-        var auth = httpContextAccessor.HttpContext?.Request.Headers["Authorization"].ToString();
-        return auth?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
-            ? auth["Bearer ".Length..] : null;
-    }
-
-    private (int UserId, string UserName) GetCurrentUser()
-    {
-        var user = httpContextAccessor.HttpContext?.User;
-        var idVal = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                 ?? user?.FindFirst("sub")?.Value;
-        var name = user?.FindFirst(ClaimTypes.Name)?.Value
-                ?? user?.FindFirst("name")?.Value
-                ?? "Unknown";
-        int.TryParse(idVal, out var id);
-        return (id, name);
-    }
-
-    private HttpClient CreateAuthorizedClient(string clientName)
-    {
-        var client = httpClientFactory.CreateClient(clientName);
-        var token = GetBearerToken();
-        if (token != null)
-            client.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-        return client;
-    }
-
     // ── Change 1: Audit logging (fire-and-forget) ─────────────────────────────
     private async Task LogAuditAsync(string action, string entityType, string entityId, string? details = null)
     {
         try
         {
-            var (userId, userName) = GetCurrentUser();
+            var (userId, userName) = ServiceHelper.GetCurrentUser(httpContextAccessor);
             if (userId == 0) return;
 
-            var client = CreateAuthorizedClient("ComplianceService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "ComplianceService");
             await client.PostAsJsonAsync("api/v1/audit", new
             {
                 UserID = userId,
@@ -76,10 +45,10 @@ public class InspectionServiceImpl(
     {
         try
         {
-            var (userId, _) = GetCurrentUser();
+            var (userId, _) = ServiceHelper.GetCurrentUser(httpContextAccessor);
             if (userId == 0) return;
 
-            var client = CreateAuthorizedClient("NotificationService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "NotificationService");
             await client.PostAsJsonAsync("api/v1/notifications", new
             {
                 UserID = userId,
@@ -159,7 +128,7 @@ public class InspectionServiceImpl(
     {
         try
         {
-            var client = CreateAuthorizedClient("WorkOrderService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "WorkOrderService");
             var response = await client.GetAsync($"api/v1/workorders/{workOrderId}");
             if (!response.IsSuccessStatusCode) return; // if WO service down, allow through
 

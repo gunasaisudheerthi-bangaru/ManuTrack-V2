@@ -1,10 +1,10 @@
 using System.Net.Http.Json;
-using System.Security.Claims;
 using AnalyticsService.DTOs;
 using AnalyticsService.Models;
 using AnalyticsService.Repositories.Interfaces;
 using AnalyticsService.Services.Interfaces;
 using ManuTrack.SharedKernel.Exceptions;
+using ManuTrack.SharedKernel.Helpers;
 using ManuTrack.SharedKernel.Responses;
 using Microsoft.AspNetCore.Http;
 
@@ -19,46 +19,15 @@ public class AnalyticsServiceImpl(
 {
     private const int MaxPageSize = 20;
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private string? GetBearerToken()
-    {
-        var auth = httpContextAccessor.HttpContext?.Request.Headers["Authorization"].ToString();
-        return auth?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
-            ? auth["Bearer ".Length..] : null;
-    }
-
-    private (int UserId, string UserName) GetCurrentUser()
-    {
-        var user = httpContextAccessor.HttpContext?.User;
-        var idVal = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                 ?? user?.FindFirst("sub")?.Value;
-        var name = user?.FindFirst(ClaimTypes.Name)?.Value
-                ?? user?.FindFirst("name")?.Value
-                ?? "Unknown";
-        int.TryParse(idVal, out var id);
-        return (id, name);
-    }
-
-    private HttpClient CreateAuthorizedClient(string clientName)
-    {
-        var client = httpClientFactory.CreateClient(clientName);
-        var token = GetBearerToken();
-        if (token != null)
-            client.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-        return client;
-    }
-
     // Change 2: audit log (fire-and-forget)
     private async Task LogAuditAsync(string action, string entityType, string entityId, string? details = null)
     {
         try
         {
-            var (userId, userName) = GetCurrentUser();
+            var (userId, userName) = ServiceHelper.GetCurrentUser(httpContextAccessor);
             if (userId == 0) return;
 
-            var client = CreateAuthorizedClient("ComplianceService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "ComplianceService");
             await client.PostAsJsonAsync("api/v1/audit", new
             {
                 UserID = userId,
@@ -197,7 +166,7 @@ public class AnalyticsServiceImpl(
     {
         try
         {
-            var client = CreateAuthorizedClient("WorkOrderService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "WorkOrderService");
             var response = await client.GetAsync("api/v1/workorders");
             if (!response.IsSuccessStatusCode) return;
 
@@ -222,7 +191,7 @@ public class AnalyticsServiceImpl(
     {
         try
         {
-            var client = CreateAuthorizedClient("InventoryService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "InventoryService");
             var response = await client.GetAsync("api/v1/inventory");
             if (!response.IsSuccessStatusCode) return;
 
@@ -240,7 +209,7 @@ public class AnalyticsServiceImpl(
     {
         try
         {
-            var client = CreateAuthorizedClient("QualityService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "QualityService");
             var response = await client.GetAsync("api/v1/defects");
             if (!response.IsSuccessStatusCode) return;
 
@@ -258,7 +227,7 @@ public class AnalyticsServiceImpl(
     {
         try
         {
-            var client = CreateAuthorizedClient("ComplianceService");
+            var client = ServiceHelper.CreateAuthorizedClient(httpClientFactory, httpContextAccessor, "ComplianceService");
             var response = await client.GetAsync("api/v1/compliance-reports");
             if (!response.IsSuccessStatusCode) return;
 
