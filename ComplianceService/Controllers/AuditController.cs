@@ -22,7 +22,7 @@ public class AuditController(IAuditService service) : ControllerBase
         [FromQuery] string? action,
         [FromQuery] string? entityId,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
+        [FromQuery] int pageSize = 20)
         => Ok(await service.GetAllAsync(userId, serviceName, from, to, entityType, action, entityId, page, pageSize));
 
     [HttpGet("{id:int}")]

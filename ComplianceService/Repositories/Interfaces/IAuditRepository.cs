@@ -13,7 +13,7 @@ public interface IAuditRepository
         string? action = null,
         string? entityId = null,
         int page = 1,
-        int pageSize = 50);
+        int pageSize = 20);
 
     Task<int> CountAsync(
         string? userId = null,

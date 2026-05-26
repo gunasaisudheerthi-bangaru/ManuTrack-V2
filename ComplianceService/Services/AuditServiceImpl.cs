@@ -9,7 +9,7 @@ namespace ComplianceService.Services;
 
 public class AuditServiceImpl(IAuditRepository repo) : IAuditService
 {
-    private const int MaxPageSize = 50;
+    private const int MaxPageSize = 20;
 
     public async Task<ApiResponse<PagedAuditViewModel>> GetAllAsync(
         string? userId,

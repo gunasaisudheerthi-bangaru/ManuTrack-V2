@@ -45,7 +45,7 @@ public class AuditRepository(AuditDbContext db) : IAuditRepository
         string? action = null,
         string? entityId = null,
         int page = 1,
-        int pageSize = 50)
+        int pageSize = 20)
     {
         return await BuildQuery(userId, serviceName, from, to, entityType, action, entityId)
             .OrderByDescending(a => a.Timestamp)
